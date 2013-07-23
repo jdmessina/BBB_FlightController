@@ -1,0 +1,13 @@
+{
+    "name": "BBB_FlightController",
+    "version": "0.0.0",
+    "description": "BeagleBone Black Flight Controller",
+    "dependencies": {
+        "socket.io": "latest",
+        "express": "latest",
+        "jade": "latest",
+        "stylus": "latest",
+        "nib": "latest"
+    },
+    "author": "John Messina"
+}
