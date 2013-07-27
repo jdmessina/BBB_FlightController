@@ -5,7 +5,6 @@
 window.onload = function() {
     var socket = io.connect(window.location.href),
         handle = {},
-        commands = {},
         graphs = {},
         history = {},
         MAX_USERS = 6;
@@ -20,13 +19,6 @@ window.onload = function() {
     handle.initiateLaunch = updatePower;
     handle.terminateLaunch = updatePower;
     handle.version = displayVersion;
-
-    // dependency injection - initialize array to loosely couple elements to be modified when events are triggered
-    commands.heartbeat = document.getElementById("led");
-    commands.telemetry = document.getElementById("led");
-    commands.initiateLaunch = document.getElementById("power");
-    commands.terminateLaunch = document.getElementById("power");
-    commands.version = document.getElementById("info");
     
     //
     // Socket IO Methods
@@ -41,13 +33,10 @@ window.onload = function() {
     // event handler, called whenever the 'updatechat' event is triggered
     function updateChat(action, data) {
         // determine if the action is a telemetry command or chat message
-        if (commands[action] === undefined) {
+        if (handle[action] === undefined) {
             // echo the chat message to the log
             $('#log').append('<div><b>' + action + ':</b> ' + data + '</div>');
         } else {
-            // echo the command to the appropriate section of the web page
-            //$('#' + commands[action]).empty();
-            //$('#' + commands[action]).append('<div>' + data + '</div>');
             handle[action](action, data);
         }
     }
@@ -81,24 +70,28 @@ window.onload = function() {
     // update the UI based on the telemetry received from the server
     function updateTelemetry(action, data) {
         // simulated
-        updateGauge(graphs.ailerons, RGraph.random(0, 180)-90, '\u00B0');
-        updateGauge(graphs.elevator, RGraph.random(0, 180)-90, '\u00B0');
-        updateGauge(graphs.rudder, RGraph.random(0, 180)-90, '\u00B0');
+        updateGauge(graphs.ailerons, RGraph.random(-90, 90), '\u00B0');
+        updateGauge(graphs.elevator, RGraph.random(-90, 90), '\u00B0');
+        updateGauge(graphs.rudder, RGraph.random(-90, 90), '\u00B0');
         updateOdometer(graphs.compass, RGraph.random(0, 360));
         updateScatterGraph(graphs.range, [RGraph.random(0, 360), RGraph.random(0, 100), 'red']);
         updateGauge(graphs.altitude, RGraph.random(0, 30), ' ft x100', history.altitude);
-        updateGauge(graphs.velocity, RGraph.random(0, 100), ' ft/sec', history.velocity);
-        updateGauge(graphs.acceleration, RGraph.random(-20, 100), ' ft/sec\u00B2', history.acceleration);
+        updateGauge(graphs.airspeed, RGraph.random(0, 100), ' ft/sec', history.velocity);
+        updateGauge(graphs.vertspeed, RGraph.random(-1000, 1000), ' ft/sec');
+        updateGauge(graphs.slip, RGraph.random(-90, 90), '\u00B0');
+        updateGauge(graphs.aoa, RGraph.random(-30, 30), '\u00B0');
+        //updateGauge(graphs.acceleration, RGraph.random(-20, 100), ' ft/sec\u00B2', history.acceleration);
         graphs.altitudehistory = drawLineGraph("altitudehistory", 'Altitude', 'sec', 'ft', 'bottom', history.altitude);
         graphs.velocityhistory = drawLineGraph("velocityhistory", 'Velocity', 'sec', 'ft/sec', 'bottom', history.velocity);
         graphs.accelerationhistory = drawLineGraph("accelerationhistory", 'Acceleration', 'sec', 'ft/sec\u00B2', 'center', history.acceleration);
+        history.acceleration.push(RGraph.random(-20, 100));
         history.time++;
     }
     
     // update the UI for the status light when the heartbeat event is received
     function heartbeat(action, data) {
         var image,
-            element = commands[action];
+            element = document.getElementById("led");
         
         // determine which image is the correct one, based on the callback data
         switch (data) {
@@ -120,15 +113,15 @@ window.onload = function() {
     
     // set the correct image for the power button
     function updatePower(action, message) {
-        var powerButton = commands['initiateLaunch'],
-            statusLED = commands['heartbeat'];
+        var powerButton = document.getElementById("power"),
+            statusLED = document.getElementById("led");
         
         switch (action) {
             case 'initiateLaunch':
                 powerButton.src = 'images/powerOff.png';
                 updateGauge(graphs.altitude, 0, ' ft x100', history.altitude, true);
-                updateGauge(graphs.velocity, 0, ' ft/sec', history.velocity, true);
-                updateGauge(graphs.acceleration, 0, ' ft/sec\u00B2', history.velocity, true);
+                updateGauge(graphs.airspeed, 0, ' ft/sec', history.velocity, true);
+                //updateGauge(graphs.acceleration, 0, ' ft/sec\u00B2', history.velocity, true);
                 updateScatterGraph(graphs.range, [[0, 0, 'red']], true);
                 history.altitude = [0];
                 history.velocity = [0];
@@ -142,8 +135,11 @@ window.onload = function() {
                 updateGauge(graphs.rudder, 0, '\u00B0');
                 updateOdometer(graphs.compass, 0);
                 updateGauge(graphs.altitude, 0, ' ft x100');
-                updateGauge(graphs.velocity, 0, ' ft/sec');
-                updateGauge(graphs.acceleration, 0, ' ft/sec\u00B2');
+                updateGauge(graphs.airspeed, 0, ' ft/sec');
+                updateGauge(graphs.vertspeed, 0, ' ft/sec');
+                updateGauge(graphs.slip, 0, '\u00B0');
+                updateGauge(graphs.aoa, 0, '\u00B0');
+                //updateGauge(graphs.acceleration, 0, ' ft/sec\u00B2');
                 break;
                 
             default:
@@ -182,6 +178,7 @@ window.onload = function() {
         chart.Set('chart.labels.count', count);
         chart.Set('chart.needle.colors',  ['#D5604D', 'red', 'black', 'blue']);
         chart.Set('chart.needle.size', [null, 50]);
+        chart.Set('chart.centerpin.radius', 8);
         chart.Set('chart.angles.start', PI);
         chart.Set('chart.angles.end', TWOPI);
         chart.Set('chart.colors.ranges', colors);
@@ -192,28 +189,48 @@ window.onload = function() {
     
     // update the Telemetry gauges, based on current input
     function updateGauge(chart, current, unit, history, reset) {
-        var bottomTitle;
+        var bottomTitle,
+            dirlow = '-- ',
+            dirhigh = '-- ';
         
         // determine which gauge is being operated on
         switch (chart.id) {
             case 'ailerons':
             case 'elevator':
             case 'rudder':
+            case 'slip':
+            case 'aoa':
+                // set the direction indicator
+                switch (chart.id) {
+                    case 'ailerons':
+                    case 'rudder':
+                    case 'slip':
+                        dirlow = 'L ';
+                        dirhigh = 'R ';
+                        break;
+                        
+                    case 'elevator':
+                    case 'aoa':
+                        dirlow = 'D ';
+                        dirhigh = 'U ';
+                }
+                
                 // update the bottom title with the current data
-                if (current < 0) {
-                    bottomTitle = 'L ' + Math.abs(current) + unit;
-                } else {
-                    if (current > 0) {
-                        bottomTitle = 'R ' + current + unit;
+                if (current !== 0) {
+                    if (current < 0) {
+                        bottomTitle = dirlow + Math.abs(current) + unit;
                     } else {
-                        bottomTitle = '-- ' + current + unit;
-                    }
+                        bottomTitle = dirhigh + current + unit;
+                    } 
+                } else {
+                    bottomTitle = '-- ' + current + unit;
                 }
                 
                 chart.value = current;
                 break;
                         
-            case 'acceleration':
+            // case 'acceleration':
+            case 'vertspeed':
                 // determine if we're reinitializing the gauge
                 if (reset === true) {
                     chart.value[2] = 0;
@@ -226,7 +243,7 @@ window.onload = function() {
                 // continue on
                 
             case 'altitude':
-            case 'velocity':
+            case 'airspeed':
                 // update the bottom title with the current data
                 bottomTitle = current + unit;
                 
@@ -468,12 +485,18 @@ window.onload = function() {
         [[-90, -60, 'red'], [-60, -30, 'yellow'], [-30, 30, 'green'], [30, 60, 'yellow'], [60, 90, 'red']], "Rudder", '-- 0', '\u00B0');
     graphs.range = drawScatterGraph("range", [[0, 0, 'red']]);
     graphs.compass = drawOdometer("compass", 0, 360, 0);
-    graphs.altitude = drawGauge("altitude", 0, 30, [0, 0], 30, 6, 4,
-        [[0, 15, 'green'], [15, 25, 'yellow'], [25, 30, 'red']], "Alt.", '0', ' ft x100');
-    graphs.velocity = drawGauge("velocity", 0, 100, [0, 0], 30, 10, 4,
-        [[0, 60, 'green'], [60, 80, 'yellow'], [80, 100, 'red']], "Vel.", '0', ' ft/sec');
-    graphs.acceleration = drawGauge("acceleration", -20, 100, [0, 0, 0], 24, 6, 6,
-        [[-20, -15, 'red'], [-15, -10, 'yellow'], [-10, 20, 'green'], [20, 60, 'yellow'], [60, 100, 'red']], "Accel.", '0', ' ft/sec\u00B2');
+    graphs.altitude = drawGauge("altitude", 0, 30, [0, 0], 40, 6, 4,
+        [[0, 15, 'green'], [15, 20, 'yellow'], [20, 30, 'red']], "Altitude", '0', ' ft x100');
+    graphs.airspeed = drawGauge("airspeed", 0, 100, [0, 0], 30, 10, 4,
+        [[0, 60, 'green'], [60, 80, 'yellow'], [80, 100, 'red']], "Airspeed", '0', ' ft/sec');
+    graphs.vertspeed = drawGauge("vertspeed", -1000, 1000, [0, 0, 0], 40, 8, 4,
+        [[-1000, -750, 'red'], [-750, -500, 'yellow'], [-500, 500, 'green'], [500, 750, 'yellow'], [750, 1000, 'red']], "V-Speed", '0', ' ft/sec');
+    graphs.slip = drawGauge("slip", -90, 90, 0, 36, 12, 6,
+        [[-90, -45, 'red'], [-45, -30, 'yellow'], [-30, 30, 'green'], [30, 45, 'yellow'], [45, 90, 'red']], "Slip", '-- 0', '\u00B0');
+    graphs.aoa = drawGauge("aoa", -30, 30, 0, 36, 12, 6,
+        [[-30, -20, 'red'], [-20, -15, 'yellow'], [-15, 15, 'green'], [15, 20, 'yellow'], [20, 30, 'red']], "AOA", '-- 0', '\u00B0');
+    //graphs.acceleration = drawGauge("acceleration", -20, 100, [0, 0, 0], 24, 6, 6,
+    //    [[-20, -15, 'red'], [-15, -10, 'yellow'], [-10, 20, 'green'], [20, 60, 'yellow'], [60, 100, 'red']], "Accel.", '0', ' ft/sec\u00B2');
     graphs.altitudehistory = drawLineGraph("altitudehistory", 'Altitude', 'sec', 'ft', 'bottom', [0]);
     graphs.velocityhistory = drawLineGraph("velocityhistory", 'Velocity', 'sec', 'ft/sec', 'bottom', [0]);
     graphs.accelerationhistory = drawLineGraph("accelerationhistory", 'Acceleration', 'sec', 'ft/sec\u00B2', 'center', [0]);

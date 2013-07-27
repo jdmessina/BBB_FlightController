@@ -2,8 +2,8 @@
 // gpio.js
 //
 
-var // bonescript = require('bonescript'),
-    bonescript = require('./bonescript-stub'),
+var bonescript = require('bonescript'),
+    // bonescript = require(./bonescript-stub'),
     events = require('events'),
     util = require('util'),
     userPins = {},

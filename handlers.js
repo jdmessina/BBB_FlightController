@@ -99,7 +99,7 @@ function disconnect(io, socket, data) {
 // event handler, called when the 'error' command is sent
 function error(io, socket, command) {
     console.log("ERROR: Command " + command + "not found");
-    io.sockets.emit('updatechat', 'SERVER', "<b>ERROR:</b> Command <b>" + command + "</b> not found");
+    //io.sockets.emit('updatechat', 'SERVER', "<b>ERROR:</b> Command <b>" + command + "</b> not found");
 }
 
 // event handler, called when the 'version' command is sent
