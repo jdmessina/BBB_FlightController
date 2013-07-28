@@ -41,10 +41,14 @@ window.onload = function() {
     
     // event handler, called whenever the 'updatechat' event is triggered
     function updateChat(action, data) {
+        var textarea = document.getElementById("log");
+        
         // determine if the action is a telemetry command or chat message
         if (handle[action] === undefined) {
             // echo the chat message to the log
             $('#log').append('<div><b>' + action + ':</b> ' + data + '</div>');
+            // set the scrollbar to the bottom
+            textarea.scrollTop = textarea.scrollHeight;
         } else {
             handle[action](action, data);
         }
@@ -120,6 +124,8 @@ window.onload = function() {
     
     // update the graphs for the current state of the system
     function updateGraphs(action, message) {
+        var textarea = document.getElementById("log");
+        
         console.log(action);
         switch (action) {
             case 'initiateLaunch':
@@ -156,6 +162,8 @@ window.onload = function() {
         // echo the chat message to the log
         if (message !== undefined) {
             $('#log').append('<div>' + message + '</div>');
+            // set the scrollbar to the bottom
+            textarea.scrollTop = textarea.scrollHeight;
         }
     }
     
@@ -171,7 +179,8 @@ window.onload = function() {
             failsafeButton = document.getElementById("failsafe"),
             resetButton = document.getElementById("reset"),
             rocketMode = document.getElementById("rocketmode"),
-            airplaneMode = document.getElementById("airplanemode");
+            airplaneMode = document.getElementById("airplanemode"),
+            textarea = document.getElementById("log");;
         
         console.log("changing to " + message);
         
@@ -221,6 +230,8 @@ window.onload = function() {
         // echo the chat message to the log
         if (message !== undefined) {
             $('#log').append('<div>' + message + '</div>');
+            // set the scrollbar to the bottom
+            textarea.scrollTop = textarea.scrollHeight;
         }
     }
     
@@ -520,7 +531,7 @@ window.onload = function() {
             $('#data').focus();
 		}
 	});
-
+    
     // when the client clicks the Arm button
     $('#arm').click(function() {
 		var message = 'armed';
