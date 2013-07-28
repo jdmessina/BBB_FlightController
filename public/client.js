@@ -84,6 +84,7 @@ window.onload = function() {
         updateGauge(graphs.altitude, RGraph.random(0, 30), ' ft x100', history.altitude);
         updateGauge(graphs.airspeed, RGraph.random(0, 100), ' ft/sec', history.velocity);
         updateGauge(graphs.vertspeed, RGraph.random(-1000, 1000), ' ft/sec');
+        updateGauge(graphs.bank, RGraph.random(-90, 90), '\u00B0');
         updateGauge(graphs.slip, RGraph.random(-90, 90), '\u00B0');
         updateGauge(graphs.aoa, RGraph.random(-30, 30), '\u00B0');
         //updateGauge(graphs.acceleration, RGraph.random(-20, 100), ' ft/sec\u00B2', history.acceleration);
@@ -145,6 +146,7 @@ window.onload = function() {
                 updateGauge(graphs.altitude, 0, ' ft x100');
                 updateGauge(graphs.airspeed, 0, ' ft/sec');
                 updateGauge(graphs.vertspeed, 0, ' ft/sec');
+                updateGauge(graphs.bank, 0, '\u00B0');
                 updateGauge(graphs.slip, 0, '\u00B0');
                 updateGauge(graphs.aoa, 0, '\u00B0');
                 //updateGauge(graphs.acceleration, 0, ' ft/sec\u00B2');
@@ -260,12 +262,14 @@ window.onload = function() {
             case 'ailerons':
             case 'elevator':
             case 'rudder':
+            case 'bank':
             case 'slip':
             case 'aoa':
                 // set the direction indicator
                 switch (chart.id) {
                     case 'ailerons':
                     case 'rudder':
+                    case 'bank':
                     case 'slip':
                         dirlow = 'L ';
                         dirhigh = 'R ';
@@ -574,6 +578,8 @@ window.onload = function() {
         [[0, 60, 'green'], [60, 80, 'yellow'], [80, 100, 'red']], "Airspeed", '0', ' ft/sec');
     graphs.vertspeed = drawGauge("vertspeed", -1000, 1000, [0, 0, 0], 40, 8, 4,
         [[-1000, -750, 'red'], [-750, -500, 'yellow'], [-500, 500, 'green'], [500, 750, 'yellow'], [750, 1000, 'red']], "V-Speed", '0', ' ft/sec');
+    graphs.bank = drawGauge("bank", -90, 90, 0, 36, 12, 6,
+        [[-90, -45, 'red'], [-45, -30, 'yellow'], [-30, 30, 'green'], [30, 45, 'yellow'], [45, 90, 'red']], "Bank", '-- 0', '\u00B0');
     graphs.slip = drawGauge("slip", -90, 90, 0, 36, 12, 6,
         [[-90, -45, 'red'], [-45, -30, 'yellow'], [-30, 30, 'green'], [30, 45, 'yellow'], [45, 90, 'red']], "Slip", '-- 0', '\u00B0');
     graphs.aoa = drawGauge("aoa", -30, 30, 0, 36, 12, 6,

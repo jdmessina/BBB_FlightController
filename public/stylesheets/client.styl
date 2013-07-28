@@ -56,12 +56,6 @@ h2
     font-size           larger
     font-weight         bold
 
-.users
-    margin-top          10px
-
-img
-    float               left
-
 /* style for RGraph components */
 canvas
     padding             0px
@@ -70,44 +64,54 @@ canvas
 /* style information for the panels */
 .panel
     float               left
-    height              235px
+    height              160px
     border-right        1px solid black
     padding             10px
     overflow            scroll-y
 
-#client     /* client panel */
+#users          /* user header */
+    margin-top          10px
+
+#controlPanel   /* control buttons */
+    margin-top          17px
+
+#client         /* client panel */
+    width               150px
     border-bottom       1px solid black
 
-#commands   /* commands panel */
-    width               400px
+#commands       /* commands panel */
+    width               440px
     border-bottom       1px solid black
 
-#status     /* status panel */
-    height              0px
-    border-right        0px
+#status         /* status panel */
+    width               325px
+    border-right        1px solid black
+    border-bottom       1px solid black
 
-#telemetry  /* telemetry panel */
-    width               257px
-    height              236px
-
-#posdir
-    text-align          center
-
-#flightcontrol     /* gauges panel */
-    width               957px
+#flightcontrol  /* gauges panel */
+    width               611px
     height              650px
+    border-right        0px
+    margin-top          0px
+
+#telemetry      /* telemetry panel */
+    width               326px
+    height              650px
+
+#analysis       /* logging panel */
+    width               957px
+    height              375px
     border-bottom       1px solid black
     margin-top          0px
 
-/* style information for the area listing connected users (client panel) */
-#users
-    width               150px
+#flightlog      /* flight analysis header */
+    margin-bottom       10px
 
-/* style information for the command input box (commands panel) */
+/* style information for the command input box */
 #data
     width               200px
 
-/* style information for the log file (commands panel) */
+/* style information for the log file */
 #log
     width               400px
     height              160px
@@ -121,9 +125,6 @@ canvas
     height              42px
     border              0px
     padding             0px
-
-/*#led
-    float               right*/
 
 /* footer style information */
 footer
