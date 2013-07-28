@@ -29,9 +29,6 @@ html
         header
             h1 BeagleBone Black Flight Controller
         #client.panel
-            input.imgButton#power(type='image', src='images/powerOn.png')
-            input.imgButton#info(type='image', src='images/help.png')
-            img.imgButton#led(src='images/LEDoff.png')
             h2.users USERS
             #users
             - for (var i = 0; i < 6; ++i) {
@@ -43,22 +40,34 @@ html
             h2 Commands
             #userInput
                 input#data
-                //input#datasend(type='image', src='images/send.png', value='send')
+                //input.imgButton#datasend(type='image', src='images/send.png', value='send')
                 input#datasend(type='button', value='send')
                 #systemInfo
                     h2 Log
                     #log
         
+        #status.panel
+            img.imgButton#led(src='images/telemetryOff.png')
+            br
+            img.imgButton#rocketmode(src='images/rocketModeOff.png')
+            br
+            img.imgButton#airplanemode(src='images/airplaneModeOff.png')
+            
         #telemetry.panel
-            h2 Position and Direction
+            h2#posdir Position and Direction
             canvas.rscatter#range(width='250', height='250') [No canvas support]
             canvas.odometer#compass(width='250', height='250') [No canvas support]
             
         #flightcontrol.panel
+            input.imgButton#arm(type='image', src='images/armOff.png')
+            input.imgButton#launch(type='image', src='images/launchOff.png')
+            input.imgButton#failsafe(type='image', src='images/failsafeOff.png')
+            input.imgButton#reset(type='image', src='images/resetOff.png')
+            input.imgButton#info(type='image', src='images/versionOn.png')
             h2 Flight Controls
-            canvas.gauge#ailerons(width='190', height='250') [No canvas support]
-            canvas.gauge#elevator(width='190', height='250') [No canvas support]
-            canvas.gauge#rudder(width='190', height='250') [No canvas support]
+            canvas.gauge#ailerons(width='190', height='190') [No canvas support]
+            canvas.gauge#elevator(width='190', height='190') [No canvas support]
+            canvas.gauge#rudder(width='190', height='190') [No canvas support]
             h2 Telemetry
             canvas.gauge#altitude(width='190', height='190') [No canvas support]
             canvas.gauge#airspeed(width='190', height='190') [No canvas support]

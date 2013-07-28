@@ -160,10 +160,7 @@ function resetled(led, gpioUser) {
 
 // initialize the telemetry callbacks to the clients
 function startTelemetry(gpioUser) {
-    // begin toggling the USR3 LED
-    blinkled(getPin("LED"), 1000, 'LEDStateChange', 'heartbeat', gpioUser);
-    
-    // setup the telemetry callback
+        // setup the telemetry callback
     gpioUser.telemetryCmd = 'telemetry';
     gpioUser.sendTelemetry = function() {
         // send the message to the user
@@ -177,9 +174,6 @@ function startTelemetry(gpioUser) {
 
 // stop sending telemetry to the clients
 function stopTelemetry(gpioUser) {
-    // stop toggling the USR3 LED
-    resetled(getPin("LED"), gpioUser);
-    
     // stop sending telemetry
     clearInterval(gpioUser.timer);
 }
@@ -197,8 +191,12 @@ function startClient(gpioUser, callback) {
         });
         
         console.log("starting BeagleBone");
+        
+        // begin toggling the USR3 LED
+        blinkled(getPin("LED"), 1000, 'LEDStateChange', 'heartbeat', gpioUser);
+        
         //send telemetry
-        startTelemetry(gpioUser);
+        //startTelemetry(gpioUser);
         
         // execute the user defined callback function, if registered
         if (callback !== undefined) {
@@ -212,8 +210,12 @@ function stopClient(gpioUser, callback) {
     // make sure we haven't already haven't terminated the service
     if (gpioUser.name !== undefined) {
         console.log("stopping BeagleBone");
+        
+        // stop toggling the USR3 LED
+        resetled(getPin("LED"), gpioUser);
+        
         // stop sending telemetry
-        stopTelemetry(gpioUser);
+        //stopTelemetry(gpioUser);
         
         // execute the user defined callback function, if registered
         if (callback !== undefined) {
@@ -230,6 +232,8 @@ function stopClient(gpioUser, callback) {
 
 // export the public functions
 exports.startClient = startClient;
+exports.startTelemetry = startTelemetry;
+exports.stopTelemetry = stopTelemetry;
 exports.stopClient = stopClient;
 exports.setInterrupt= setInterrupt;
 exports.getInfo = getInfo;

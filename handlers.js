@@ -5,6 +5,8 @@
 var gpio = require("./gpio"),
     gpioUser = {},
     handle = {},
+    state = {STANDBY: "standby", ARMED: "armed", ROCKET: "rocket", AIRPLANE: "airplane", FAILSAFE: "failsafe"},
+    currentState = state.STANDBY,
     usernames = {}; // usernames which are currently connected to the chat
 
 //dependency injection - initialize array to loosely couple event callbacks and their actions
@@ -13,8 +15,13 @@ handle.sendchat = sendChat;
 handle.adduser = addUser;
 handle.disconnect = disconnect;
 handle.version = version;
-handle.launch = launch;
-handle.shutdown = shutdown;
+handle.getState = getState;
+handle.setState = setState;
+handle.standby = setState;
+handle.armed = setState;
+handle.flight = setState;
+handle.airplane = setState;
+handle.failsafe = setState;
 handle.error = error;
 
 // initialize the initial listener for connections by the client
@@ -29,7 +36,12 @@ function routeHandle(io, socket, command, data) {
     // if we know what the command is, route it.  Otherwise throw an error
     if (typeof handle[command] === 'function') {
         console.log("route command: " + command);
-        handle[command](io, socket, data);
+        
+        if (data) {
+            handle[command](io, socket, data);
+        } else {
+            handle[command](io, socket, command);
+        }
     } else {
         handle.error(io, socket, command);
     }
@@ -78,6 +90,8 @@ function addUser(io, socket, username) {
 	    // update the list of users in chat, client-side
 	    io.sockets.emit('updateusers', usernames);
 	    console.log("updateusers: " + username + ' has connected');
+        // tell the client the current state of the system
+        socket.emit('updatechat', currentState, '<b>SERVER:</b> System is <i>' + currentState + '</i>');
     } else {
         // emit the event to request the user enter their name to connect
         socket.emit('updatechat', 'SERVER', 'Enter your name to connect');
@@ -108,14 +122,84 @@ function version(io, socket, data) {
     io.sockets.emit('updatechat', 'SERVER', gpioUser.message);
 }
 
-// event handler, called when the 'launch' command is sent
-function launch(io, socket, data) {
+// event handler, called when the client requests the current state of the system
+function getState(io, socket, data) {
+    io.sockets.emit('updatechat', 'SERVER', currentState);
+}
+
+// event handler, called when the client changes the state of the system
+function setState(io, socket, data) {
+    var changeState = false,
+        newState = data,
+        properState;
+    
+    console.log("current state is " + currentState);
+    console.log("moving to " + data);
+    
+    // perform specific actions based on the state change
+    switch (data) {
+        case 'standby':
+            // only allow state changes from ARMED or FAILSAFE to STANDBY
+            if (currentState == state.ARMED || currentState == state.FAILSAFE) {
+                changeState = true;
+                standby(io, socket, data);
+            } else {
+                properState = state.ARMED + ' </i>or<i> ' + state.FAILSAFE;
+            }
+            break;
+            
+        case 'armed':
+            // only allow state changes from STANDBY or FAILSAFE to ARMED
+            if (currentState == state.STANDBY || currentState == state.FAILSAFE) {
+                changeState = true;
+                arm(io, socket, data);
+            } else {
+                properState = state.STANDBY + ' </i>or<i> ' + state.FAILSAFE;
+            }
+            break;
+            
+        case 'flight':
+            // only allow state changes from ARMED to FLIGHT (roocket or airplane)
+            if (currentState == state.ARMED) {
+                changeState = true;
+                newState = state.ROCKET;
+                launch(io, socket, data);
+            } else {
+                properState = state.ARMED;
+            }
+            break;
+            
+        case 'failsafe':
+            // only allow state changes from FLIGHT (roocket or airplane) to FAILSAFE
+            if (currentState == state.ROCKET || currentState == state.AIRPLANE) {
+                changeState = true;
+                newState = state.FAILSAFE;
+                failsafe(io, socket, data);
+            } else {
+                properState = state.ROCKET + ' </i>or<i> ' + state.AIRPLANE;
+            }
+    }
+    
+    // if the state change is allowed, inform the client that the state change was successful, otherwise report an error
+    if (changeState) {
+        currentState = newState;
+        console.log('setstate: ' + newState);
+        io.sockets.emit('updatechat', currentState, '<b>SERVER:</b> System is <i>' + currentState + '</i>');
+    } else {
+        io.sockets.emit('updatechat', 'SERVER', '<b>ERROR:</b> System is in the <i>' +
+            currentState + '</i>, but needs to be in the <i>' + properState + '</i> state');
+    }
+}
+
+// event handler, called when the 'armed' command is sent
+function arm(io, socket, data) {
     // make sure we haven't already started the service
     if (gpioUser.name === undefined) {
         // setup the communication function to be used when events are triggered by the GPIO
         gpioUser.chat = function(command) {
             io.sockets.emit('updatechat', command, gpioUser.message);
         };
+        
         // start the Flight Controller service
         gpio.startClient(gpioUser, function(gpioUser) {
             // callback function to be executed when the GPIO has completed its processing
@@ -126,27 +210,46 @@ function launch(io, socket, data) {
             io.sockets.emit('updatechat', 'SERVER', gpioUser.name + ' has connected');
             // update the list of users in chat, client-side
             io.sockets.emit('updateusers', usernames);
-            // tell the client that the launch has been initiated
-            io.sockets.emit('updatechat', 'initiateLaunch', '<b>' + gpioUser.name + ':</b> Launch initiated');
+            // tell the client that the telemetry has been initiated
+            io.sockets.emit('updatechat', 'initiateTelemetry', '<b>' + gpioUser.name + ':</b> Telemetry initiated');
         });
     } else {
-        // log the fact that the Flight Controller service has already been started
-        io.sockets.emit('updatechat', 'SERVER', gpioUser.name + ' is already connected');
+        // tell the client that the launch has been reset
+        io.sockets.emit('updatechat', 'resetLaunch', '<b>' + gpioUser.name + ':</b> Flight reset');
+        
     }
 }
 
-// event handler, called when the 'launch' command is sent
-function shutdown(io, socket, data) {
+// event handler, called when the 'launch' commmand is sent
+function launch(io, socket, data) {
+    gpio.startTelemetry(gpioUser);
+    
+    // tell the client that the launch has been initiated
+    io.sockets.emit('updatechat', 'initiateLaunch', '<b>' + gpioUser.name + ':</b> Flight initiated');
+}
+
+// event handler, called when the 'failsafe' commmand is sent
+function failsafe(io, socket, data) {
+    gpio.stopTelemetry(gpioUser);
+    
+    // tell the client that the launch has been terminated
+    io.sockets.emit('updatechat', 'terminateLaunch', '<b>' + gpioUser.name + ':</b> Flight terminated');
+}
+
+// event handler, called when the 'standby' command is sent
+function standby(io, socket, data) {
     // make sure we haven't already haven't terminated the service
     if (gpioUser.name !== undefined) {
+        // tell the client that the telemetry has been initiated
+        io.sockets.emit('updatechat', 'terminateTelemetry', '<b>' + gpioUser.name + ':</b> Telemetry terminated');
+        
         // message to send once the service has been terminated
         gpioUser.message = 'dead';
+        
         // terminate the Flight Controller service
         gpio.stopClient(gpioUser, function(gpioUser) {
             // callback function to be executed when the GPIO has completed its processing
             
-            // tell the client that the launch has been initiated
-            io.sockets.emit('updatechat', 'terminateLaunch', '<b>' + gpioUser.name + ':</b> Flight terminated');
             // remove the username from global usernames list
             delete usernames[gpioUser.name];
             // update list of users in chat, client-side
@@ -160,7 +263,7 @@ function shutdown(io, socket, data) {
         });
     } else {
         // log the fact that the Flight Controller service has already been terminated
-        io.sockets.emit('updatechat', 'SERVER', 'GPIO client is already shutdown.  Initiate <b>launch</b> to connect the GPIO client');
+        io.sockets.emit('updatechat', 'SERVER', 'GPIO client is already shutdown.  Initiate <b>ARM</b> to connect the GPIO client');
     }
 }
 

@@ -7,6 +7,7 @@ window.onload = function() {
         handle = {},
         graphs = {},
         history = {},
+        currentState = 'standby',
         MAX_USERS = 6;
 
     // dependency injection - initialize array to loosely couple event callbacks and their actions
@@ -16,8 +17,16 @@ window.onload = function() {
     handle.updateusers = updateUsers;
     handle.heartbeat = heartbeat;
     handle.telemetry = updateTelemetry;
-    handle.initiateLaunch = updatePower;
-    handle.terminateLaunch = updatePower;
+    handle.standby = setState;
+    handle.armed = setState;
+    handle.rocket = setState;
+    handle.airplane = setState;
+    handle.failsafe = setState;
+    handle.initiateTelemetry = updateGraphs;
+    handle.initiateLaunch = updateGraphs;
+    handle.resetLaunch = updateGraphs;
+    handle.terminateLaunch = updateGraphs;
+    handle.terminateTelemetry = updateGraphs;
     handle.version = displayVersion;
     
     //
@@ -58,9 +67,6 @@ window.onload = function() {
         while (i < MAX_USERS) {
             updateLEDGraph(graphs['user' + i++], "");
         }
-        
-        // ensure that the power button is set appropriately
-        updatePower('updateusers');
     }
     
     //
@@ -96,40 +102,42 @@ window.onload = function() {
         // determine which image is the correct one, based on the callback data
         switch (data) {
             case 'LED on':
-                image = 'images/blueLEDon.png';
+                image = 'images/telemetryOnHigh.png';
                 break;
                 
             case 'LED off':
-                image = 'images/blueLEDoff.png';
+                image = 'images/telemetryOnLow.png';
                 break;
                 
             default:
-                image = 'images/LEDoff.png';
+                image = 'images/telemetryOff.png';
         }
                 
         // replace the UI image for the status light
         element.src = image;
     }
     
-    // set the correct image for the power button
-    function updatePower(action, message) {
-        var powerButton = document.getElementById("power"),
-            statusLED = document.getElementById("led");
-        
+    // update the graphs for the current state of the system
+    function updateGraphs(action, message) {
+        console.log(action);
         switch (action) {
             case 'initiateLaunch':
-                powerButton.src = 'images/powerOff.png';
+            case 'resetLaunch':
+            case 'terminateTelemetry':
                 updateGauge(graphs.altitude, 0, ' ft x100', history.altitude, true);
                 updateGauge(graphs.airspeed, 0, ' ft/sec', history.velocity, true);
+                updateGauge(graphs.vertspeed, 0, ' ft/sec', null, true);
                 //updateGauge(graphs.acceleration, 0, ' ft/sec\u00B2', history.velocity, true);
                 updateScatterGraph(graphs.range, [[0, 0, 'red']], true);
                 history.altitude = [0];
                 history.velocity = [0];
                 history.acceleration = [0];
+                graphs.altitudehistory = drawLineGraph("altitudehistory", 'Altitude', 'sec', 'ft', 'bottom', history.altitude);
+                graphs.velocityhistory = drawLineGraph("velocityhistory", 'Velocity', 'sec', 'ft/sec', 'bottom', history.velocity);
+                graphs.accelerationhistory = drawLineGraph("accelerationhistory", 'Acceleration', 'sec', 'ft/sec\u00B2', 'center', history.acceleration);
                 break;
                 
             case 'terminateLaunch':
-                powerButton.src = 'images/powerOn.png';
                 updateGauge(graphs.ailerons, 0, '\u00B0');
                 updateGauge(graphs.elevator, 0, '\u00B0');
                 updateGauge(graphs.rudder, 0, '\u00B0');
@@ -141,12 +149,6 @@ window.onload = function() {
                 updateGauge(graphs.aoa, 0, '\u00B0');
                 //updateGauge(graphs.acceleration, 0, ' ft/sec\u00B2');
                 break;
-                
-            default:
-                // set the image for the power button appropriately when new clients are attached
-                if (parseUrl(statusLED.src).pathname !== '/images/LEDoff.png') {
-                    powerButton.src = 'images/powerOff.png';
-                }
         }
         
         // echo the chat message to the log
@@ -158,6 +160,66 @@ window.onload = function() {
     //display an alert with the version info
     function displayVersion(action, message) {
         alert(message);
+    }
+    
+    // set the state of the system
+    function setState(action, message) {
+        var armButton = document.getElementById("arm"),
+            launchButton = document.getElementById("launch"),
+            failsafeButton = document.getElementById("failsafe"),
+            resetButton = document.getElementById("reset"),
+            rocketMode = document.getElementById("rocketmode"),
+            airplaneMode = document.getElementById("airplanemode");
+        
+        console.log("changing to " + message);
+        
+        // update the UI based on the current state of the system
+        switch (action) {
+            case 'standby':
+                armButton.src = 'images/armStandby.png';
+                launchButton.src = 'images/launchOff.png';
+                resetButton.src = 'images/resetOff.png';
+                break;
+                
+            case 'armed':
+                armButton.src = 'images/armEnabled.png';
+                launchButton.src = 'images/launchOn.png';
+                resetButton.src = 'images/resetOff.png';
+                rocketMode.src = 'images/rocketModeOff.png';
+                airplaneMode.src = 'images/airplaneModeOff.png';
+                break;
+            
+            case 'rocket':
+            case 'airplane':
+                armButton.src = 'images/armOff.png';
+                launchButton.src = 'images/launchOff.png';
+                failsafeButton.src = 'images/failsafeOn.png';
+                
+                if (action == 'rocket') {
+                    rocketMode.src = 'images/rocketModeOn.png';
+                    airplaneMode.src = 'images/airplaneModeOff.png';
+                } else {
+                    rocketMode.src = 'images/rocketModeOff.png';
+                    airplaneMode.src = 'images/airplaneModeOn.png';
+                }
+                break;
+                
+            case 'failsafe':
+                armButton.src = 'images/armReset.png';
+                resetButton.src = 'images/resetOn.png';
+                failsafeButton.src = 'images/failsafeOff.png';
+                rocketMode.src = 'images/rocketModeOff.png';
+                airplaneMode.src = 'images/airplaneModeOff.png';
+                break;
+        }
+        
+        // save the current state of the system
+        currentState = action;
+        
+        // echo the chat message to the log
+        if (message !== undefined) {
+            $('#log').append('<div>' + message + '</div>');
+        }
     }
     
     //
@@ -455,16 +517,37 @@ window.onload = function() {
 		}
 	});
 
-    // when the client clicks the Power button
-    $('#power').click(function() {
-		var message = 'launch',
-            buttonImage = 'images/powerOn.png',
-            powerButton = document.getElementById("power");
-             
-        // determine which image is currently being displayed, switch the image, set the message to execute the correct callback function
-        if (parseUrl(powerButton.src).pathname !== '/' + buttonImage) {
-            message = 'shutdown';
+    // when the client clicks the Arm button
+    $('#arm').click(function() {
+		var message = 'armed';
+
+        if (currentState != 'standby') {
+            message = 'standby';
         }
+        
+		// tell server to execute 'sendchat' and send along one parameter to execute the appropriate callback function
+		socket.emit('sendchat', message);
+	});
+    
+    // when the client clicks the Launch button
+    $('#launch').click(function() {
+    	var message = 'flight';
+        
+		// tell server to execute 'sendchat' and send along one parameter to execute the appropriate callback function
+		socket.emit('sendchat', message);
+	});
+    
+    // when the client clicks the Failsafe button
+    $('#failsafe').click(function() {
+    	var message = 'failsafe';
+        
+		// tell server to execute 'sendchat' and send along one parameter to execute the appropriate callback function
+		socket.emit('sendchat', message);
+	});
+    
+    // when the client clicks the Reset button
+    $('#reset').click(function() {
+    	var message = 'armed';
         
 		// tell server to execute 'sendchat' and send along one parameter to execute the appropriate callback function
 		socket.emit('sendchat', message);
