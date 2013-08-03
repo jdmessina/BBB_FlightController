@@ -8,7 +8,7 @@ window.onload = function() {
         graphs = {},
         history = {},
         currentState = 'standby',
-        currentMode,
+        currentMode = 'off',
         MAX_USERS = 6;
 
     // dependency injection - initialize array to loosely couple event callbacks and their actions
@@ -179,6 +179,7 @@ window.onload = function() {
         var textarea = document.getElementById("log"),
             rocketMode = document.getElementById("rocketmode"),
             airplaneMode = document.getElementById("airplanemode"),
+            newMode = action,
             rocketModeOn,
             rocketModeOff,
             airplaneModeOn,
@@ -198,6 +199,7 @@ window.onload = function() {
             case 'standby':
                 rocketModeOn = 'images/rocketModeOff.png';
                 airplaneModeOn = 'images/airplaneModeOff.png';
+                newMode = 'off';
                 break;
                 
             default:
@@ -206,7 +208,7 @@ window.onload = function() {
         }
         
         // set the proper button to 'on', based on the current flight mode
-        switch (action) {
+        switch (newMode) {
             case 'rocket':
                 rocketMode.src = rocketModeOn;
                 airplaneMode.src = airplaneModeOff;
@@ -216,10 +218,14 @@ window.onload = function() {
                 rocketMode.src = rocketModeOff;
                 airplaneMode.src = airplaneModeOn;
                 break;
+                
+            default:
+                rocketMode.src = rocketModeOff;
+                airplaneMode.src = airplaneModeOff;
         }
         
         // save the current state of the system
-        currentMode = action;
+        currentMode = newMode;
         
         // echo the chat message to the log
         if (message !== undefined) {

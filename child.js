@@ -1,5 +1,5 @@
 var bonescript = require('bonescript');
-    // bonescript = require(./bonescript-stub');
+    // bonescript = require('./bonescript-stub');
 
 // respond to the parent when there is a state change in the pin
 function readPin(pin) {
