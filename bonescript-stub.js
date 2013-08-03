@@ -3,6 +3,14 @@ var	LOW = 0,
 	INPUT = "in",
 	OUTPUT = "out";
 
+function digitalRead(pin, callback) {
+	if (callback) {
+		callback();
+	}
+
+	return(0);
+}
+
 function digitalWrite(pin, value, callback) {
 	if (callback) {
 		callback();
@@ -49,6 +57,7 @@ exports.LOW = LOW;
 exports.HIGH = HIGH;
 exports.INPUT = INPUT;
 exports.OUTPUT = OUTPUT;
+exports.digitalRead = digitalRead;
 exports.digitalWrite = digitalWrite;
 exports.attachInterrupt = attachInterrupt;
 exports.detachInterrupt = detachInterrupt;

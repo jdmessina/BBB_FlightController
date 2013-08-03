@@ -5,7 +5,8 @@
 var gpio = require("./gpio"),
     gpioUser = {},
     handle = {},
-    state = {STANDBY: "standby", ARMED: "armed", ROCKET: "rocket", AIRPLANE: "airplane", FAILSAFE: "failsafe"},
+    state = {STANDBY: "standby", ARMED: "armed", FLIGHT: "flight", FAILSAFE: "failsafe"},
+    mode = ["rocket", "airplane"],
     currentState = state.STANDBY,
     usernames = {}; // usernames which are currently connected to the chat
 
@@ -20,7 +21,6 @@ handle.setState = setState;
 handle.standby = setState;
 handle.armed = setState;
 handle.flight = setState;
-handle.airplane = setState;
 handle.failsafe = setState;
 handle.error = error;
 
@@ -134,10 +134,10 @@ function setState(io, socket, data) {
         properState;
     
     console.log("current state is " + currentState);
-    console.log("moving to " + data);
+    console.log("moving to " + newState);
     
     // perform specific actions based on the state change
-    switch (data) {
+    switch (newState) {
         case 'standby':
             // only allow state changes from ARMED or FAILSAFE to STANDBY
             if (currentState == state.ARMED || currentState == state.FAILSAFE) {
@@ -162,7 +162,6 @@ function setState(io, socket, data) {
             // only allow state changes from ARMED to FLIGHT (roocket or airplane)
             if (currentState == state.ARMED) {
                 changeState = true;
-                newState = state.ROCKET;
                 launch(io, socket, data);
             } else {
                 properState = state.ARMED;
@@ -171,12 +170,12 @@ function setState(io, socket, data) {
             
         case 'failsafe':
             // only allow state changes from FLIGHT (roocket or airplane) to FAILSAFE
-            if (currentState == state.ROCKET || currentState == state.AIRPLANE) {
+            if (currentState == state.FLIGHT) {
                 changeState = true;
                 newState = state.FAILSAFE;
                 failsafe(io, socket, data);
             } else {
-                properState = state.ROCKET + ' </i>or<i> ' + state.AIRPLANE;
+                properState = state.FLIGHT + ' </i>or<i> ' + state.AIRPLANE;
             }
     }
     
@@ -197,8 +196,12 @@ function arm(io, socket, data) {
     if (gpioUser.name === undefined) {
         // setup the communication function to be used when events are triggered by the GPIO
         gpioUser.chat = function(command) {
+            console.log('sending chat ' + command + ': ' + gpioUser.message);
             io.sockets.emit('updatechat', command, gpioUser.message);
         };
+        
+        // setup the valid flight modes
+        gpioUser.mode = mode;
         
         // start the Flight Controller service
         gpio.startClient(gpioUser, function(gpioUser) {

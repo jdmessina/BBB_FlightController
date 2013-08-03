@@ -3,9 +3,11 @@
 //
 
 var bonescript = require('bonescript'),
-    // bonescript = require(./bonescript-stub'),
+    // bonescript = require('./bonescript-stub'),
     events = require('events'),
     util = require('util'),
+    readHandle,
+    telemetry = require('./telemetry'),
     userPins = {},
     userGPIO = {};
 
@@ -18,6 +20,7 @@ userPins.A_INT1 = "P9_14";
 userPins.G_INT = "P9_16";
 userPins.P_XCLR = "P9_18";
 userPins.P_ECC = "P9_22";
+userPins.F_MODE = "P9_42";
 
 // return the internal pin identifier when given the external identifier.
 function getPin(pin) {
@@ -160,7 +163,7 @@ function resetled(led, gpioUser) {
 
 // initialize the telemetry callbacks to the clients
 function startTelemetry(gpioUser) {
-        // setup the telemetry callback
+    // setup the telemetry callback
     gpioUser.telemetryCmd = 'telemetry';
     gpioUser.sendTelemetry = function() {
         // send the message to the user
@@ -168,7 +171,6 @@ function startTelemetry(gpioUser) {
         gpioUser.chat(gpioUser.telemetryCmd);
     };
     
-    // begin sending telemetry
     gpioUser.timer = setInterval(gpioUser.sendTelemetry, 100);
 }
 
@@ -195,9 +197,14 @@ function startClient(gpioUser, callback) {
         // begin toggling the USR3 LED
         blinkled(getPin("LED"), 1000, 'LEDStateChange', 'heartbeat', gpioUser);
         
-        //send telemetry
-        //startTelemetry(gpioUser);
-        
+        // start polling for chages to the F_MODE pin
+        readHandle = telemetry.setReadEvent(userPins.F_MODE, function(mode) {
+            console.log('PARENT got message:', mode);
+            gpioUser.message = '<b>' + gpioUser.name + '</b> changing to mode ' + gpioUser.mode[mode];
+            console.log('mode is ' + gpioUser.mode[mode]);
+            gpioUser.chat(gpioUser.mode[mode]);
+        });
+    
         // execute the user defined callback function, if registered
         if (callback !== undefined) {
             callback(gpioUser);
@@ -214,8 +221,8 @@ function stopClient(gpioUser, callback) {
         // stop toggling the USR3 LED
         resetled(getPin("LED"), gpioUser);
         
-        // stop sending telemetry
-        //stopTelemetry(gpioUser);
+        // stop telemetry child process
+        telemetry.clearReadEvent(readHandle);
         
         // execute the user defined callback function, if registered
         if (callback !== undefined) {

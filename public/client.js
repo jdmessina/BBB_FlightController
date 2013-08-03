@@ -8,6 +8,7 @@ window.onload = function() {
         graphs = {},
         history = {},
         currentState = 'standby',
+        currentMode,
         MAX_USERS = 6;
 
     // dependency injection - initialize array to loosely couple event callbacks and their actions
@@ -19,9 +20,10 @@ window.onload = function() {
     handle.telemetry = updateTelemetry;
     handle.standby = setState;
     handle.armed = setState;
-    handle.rocket = setState;
-    handle.airplane = setState;
+    handle.flight = setState;
     handle.failsafe = setState;
+    handle.rocket = setMode;
+    handle.airplane = setMode;
     handle.initiateTelemetry = updateGraphs;
     handle.initiateLaunch = updateGraphs;
     handle.resetLaunch = updateGraphs;
@@ -172,15 +174,68 @@ window.onload = function() {
         alert(message);
     }
     
+    // set the flight mode
+    function setMode(action, message) {
+        var textarea = document.getElementById("log"),
+            rocketMode = document.getElementById("rocketmode"),
+            airplaneMode = document.getElementById("airplanemode"),
+            rocketModeOn,
+            rocketModeOff,
+            airplaneModeOn,
+            airplaneModeOff;
+        
+        console.log('setting mode: ' + action);
+        rocketModeOff = 'images/rocketModeOff.png';
+        airplaneModeOff = 'images/airplaneModeOff.png';
+        
+        // determine the correct set of button images, based on the current state of the system
+        switch (currentState) {
+            case 'flight':
+                rocketModeOn = 'images/rocketModeOn.png';
+                airplaneModeOn = 'images/airplaneModeOn.png';
+                break;
+                
+            case 'standby':
+                rocketModeOn = 'images/rocketModeOff.png';
+                airplaneModeOn = 'images/airplaneModeOff.png';
+                break;
+                
+            default:
+                rocketModeOn = 'images/rocketModeStandby.png';
+                airplaneModeOn = 'images/airplaneModeStandby.png';
+        }
+        
+        // set the proper button to 'on', based on the current flight mode
+        switch (action) {
+            case 'rocket':
+                rocketMode.src = rocketModeOn;
+                airplaneMode.src = airplaneModeOff;
+                break;
+                
+            case 'airplane':
+                rocketMode.src = rocketModeOff;
+                airplaneMode.src = airplaneModeOn;
+                break;
+        }
+        
+        // save the current state of the system
+        currentMode = action;
+        
+        // echo the chat message to the log
+        if (message !== undefined) {
+            $('#log').append('<div>' + message + '</div>');
+            // set the scrollbar to the bottom
+            textarea.scrollTop = textarea.scrollHeight;
+        }
+    }
+    
     // set the state of the system
     function setState(action, message) {
         var armButton = document.getElementById("arm"),
             launchButton = document.getElementById("launch"),
             failsafeButton = document.getElementById("failsafe"),
             resetButton = document.getElementById("reset"),
-            rocketMode = document.getElementById("rocketmode"),
-            airplaneMode = document.getElementById("airplanemode"),
-            textarea = document.getElementById("log");;
+            textarea = document.getElementById("log");
         
         console.log("changing to " + message);
         
@@ -190,42 +245,31 @@ window.onload = function() {
                 armButton.src = 'images/armStandby.png';
                 launchButton.src = 'images/launchOff.png';
                 resetButton.src = 'images/resetOff.png';
+
                 break;
                 
             case 'armed':
                 armButton.src = 'images/armEnabled.png';
                 launchButton.src = 'images/launchOn.png';
                 resetButton.src = 'images/resetOff.png';
-                rocketMode.src = 'images/rocketModeOff.png';
-                airplaneMode.src = 'images/airplaneModeOff.png';
                 break;
             
-            case 'rocket':
-            case 'airplane':
+            case 'flight':
                 armButton.src = 'images/armOff.png';
                 launchButton.src = 'images/launchOff.png';
                 failsafeButton.src = 'images/failsafeOn.png';
-                
-                if (action == 'rocket') {
-                    rocketMode.src = 'images/rocketModeOn.png';
-                    airplaneMode.src = 'images/airplaneModeOff.png';
-                } else {
-                    rocketMode.src = 'images/rocketModeOff.png';
-                    airplaneMode.src = 'images/airplaneModeOn.png';
-                }
                 break;
                 
             case 'failsafe':
                 armButton.src = 'images/armReset.png';
                 resetButton.src = 'images/resetOn.png';
                 failsafeButton.src = 'images/failsafeOff.png';
-                rocketMode.src = 'images/rocketModeOff.png';
-                airplaneMode.src = 'images/airplaneModeOff.png';
                 break;
         }
         
         // save the current state of the system
         currentState = action;
+        setMode(currentMode);
         
         // echo the chat message to the log
         if (message !== undefined) {
