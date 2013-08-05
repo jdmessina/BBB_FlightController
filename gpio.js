@@ -5,7 +5,6 @@
 var bonescript = require('bonescript'),
     // bonescript = require('./bonescript-stub'),
     events = require('events'),
-    util = require('util'),
     readHandle,
     telemetry = require('./telemetry'),
     userPins = {},
@@ -134,7 +133,6 @@ function blinkled(led, timeout, event, command, gpioUser) {
     
     // set a recurring interval to toggle the state of the pin
     userLED.timer = setInterval(userLED.toggle, timeout);
-    console.log(util.inspect(userLED.eventEmitter.listeners(userLED.eventHandle)));
 }
 
 // return the GPIO pin to its original state
@@ -196,8 +194,9 @@ function startClient(gpioUser, callback) {
         
         // begin toggling the USR3 LED
         blinkled(getPin("LED"), 1000, 'LEDStateChange', 'heartbeat', gpioUser);
-        
+
         // start polling for chages to the F_MODE pin
+        console.log("starting telemetry");
         readHandle = telemetry.setReadEvent(userPins.F_MODE, function(mode) {
             console.log('PARENT got message:', mode);
             gpioUser.message = '<b>' + gpioUser.name + '</b> changing to mode ' + gpioUser.mode[mode];
@@ -222,6 +221,7 @@ function stopClient(gpioUser, callback) {
         resetled(getPin("LED"), gpioUser);
         
         // stop telemetry child process
+        console.log("stopping telemetry");
         telemetry.clearReadEvent(readHandle);
         
         // execute the user defined callback function, if registered
