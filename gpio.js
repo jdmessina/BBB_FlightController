@@ -5,8 +5,6 @@
 var bonescript = require('bonescript'),
     // bonescript = require('./bonescript-stub'),
     events = require('events'),
-    readHandle,
-    telemetry = require('./telemetry'),
     userPins = {},
     userGPIO = {};
 
@@ -180,6 +178,33 @@ function stopTelemetry(gpioUser) {
 
 // starts the Flight Controller service
 function startClient(gpioUser, callback) {
+    // callback to set the flight mode when the flight mode pin changes state
+    function modeStatus(x) {
+        var mode;
+        
+        switch (x.value) {
+            // set the flight mode to mode 0
+            case 0:
+            case '0\n':
+                mode = bonescript.LOW;
+                break;
+            
+            // set the flight mode to mode 1
+            case 1:
+            case '1\n':
+                mode = bonescript.HIGH;
+                break;
+        }
+        
+        // if this is a valid flight mode, set the correct mode and inform the client of the mode change
+        if (mode !== undefined) {
+            console.log(userPins.F_MODE + ': ' + mode);
+            gpioUser.message = '<b>' + gpioUser.name + '</b> changing to mode ' + gpioUser.mode[mode];
+            console.log('mode is ' + gpioUser.mode[mode]);
+            gpioUser.chat(gpioUser.mode[mode]);
+        }
+    }
+    
     // make sure we haven't already started the service
     if (gpioUser.name === undefined) {
         // initialize the GPIO user information
@@ -197,13 +222,14 @@ function startClient(gpioUser, callback) {
 
         // start polling for chages to the F_MODE pin
         console.log("starting telemetry");
-        readHandle = telemetry.setReadEvent(userPins.F_MODE, function(mode) {
-            console.log('PARENT got message:', mode);
-            gpioUser.message = '<b>' + gpioUser.name + '</b> changing to mode ' + gpioUser.mode[mode];
-            console.log('mode is ' + gpioUser.mode[mode]);
-            gpioUser.chat(gpioUser.mode[mode]);
-        });
-    
+        // set the pin mode to read
+        bonescript.pinMode(userPins.F_MODE, bonescript.INPUT);
+        // set an interrupt to read changes to the pin value
+        if (bonescript.attachInterrupt(userPins.F_MODE, true, 'both', modeStatus)) {
+            // read the current state of the flight mode pin once the interrupt is successfully initialized
+            bonescript.digitalRead(userPins.F_MODE, modeStatus);
+        }
+        
         // execute the user defined callback function, if registered
         if (callback !== undefined) {
             callback(gpioUser);
@@ -222,7 +248,8 @@ function stopClient(gpioUser, callback) {
         
         // stop telemetry child process
         console.log("stopping telemetry");
-        telemetry.clearReadEvent(readHandle);
+        // clear the interrupt for the flight mode pin
+        bonescript.detachInterrupt(userPins.F_MODE);
         
         // execute the user defined callback function, if registered
         if (callback !== undefined) {
