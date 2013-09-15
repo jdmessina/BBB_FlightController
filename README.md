@@ -12,7 +12,7 @@ Currently, this is just a test setup as it is still a work in progress.
 
 ##Work In Progress
 - reading the data from the flight controller board
-- calculating the servo commandes based on the flight controller data
+- calculating the servo commands based on the flight controller data
 - interfacing with the servos
 
 ##Dependencies
