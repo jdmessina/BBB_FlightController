@@ -82,22 +82,22 @@ window.onload = function() {
     // update the UI based on the telemetry received from the server
     function updateTelemetry(action, data) {
         // simulated
-        updateGauge(graphs.ailerons, RGraph.random(-90, 90), '\u00B0');
-        updateGauge(graphs.elevator, RGraph.random(-90, 90), '\u00B0');
-        updateGauge(graphs.rudder, RGraph.random(-90, 90), '\u00B0');
-        updateOdometer(graphs.compass, RGraph.random(0, 360));
-        updateScatterGraph(graphs.range, [RGraph.random(0, 360), RGraph.random(0, 100), 'red']);
-        updateGauge(graphs.altitude, RGraph.random(0, 30), ' ft x100', history.altitude);
-        updateGauge(graphs.airspeed, RGraph.random(0, 100), ' ft/sec', history.velocity);
-        updateGauge(graphs.vertspeed, RGraph.random(-1000, 1000), ' ft/sec');
-        updateGauge(graphs.bank, RGraph.random(-90, 90), '\u00B0');
-        updateGauge(graphs.slip, RGraph.random(-90, 90), '\u00B0');
-        updateGauge(graphs.aoa, RGraph.random(-30, 30), '\u00B0');
+        updateGauge(graphs.ailerons, data.ailerons, '\u00B0');
+        updateGauge(graphs.elevator, data.elevator, '\u00B0');
+        updateGauge(graphs.rudder, data.rudder, '\u00B0');
+        updateOdometer(graphs.compass, data.compass);
+        updateScatterGraph(graphs.range, [data.radial, data.distance, 'red']);
+        updateGauge(graphs.altitude, data.altitude, ' ft x100', history.altitude);
+        updateGauge(graphs.airspeed, data.airspeed, ' ft/sec', history.velocity);
+        updateGauge(graphs.vertspeed, data.vertspeed, ' ft/sec');
+        updateGauge(graphs.bank, data.bank, '\u00B0');
+        updateGauge(graphs.slip, data.slip, '\u00B0');
+        updateGauge(graphs.aoa, data.aoa, '\u00B0');
         //updateGauge(graphs.acceleration, RGraph.random(-20, 100), ' ft/sec\u00B2', history.acceleration);
         graphs.altitudehistory = drawLineGraph("altitudehistory", 'Altitude', 'sec', 'ft', 'bottom', history.altitude);
         graphs.velocityhistory = drawLineGraph("velocityhistory", 'Velocity', 'sec', 'ft/sec', 'bottom', history.velocity);
         graphs.accelerationhistory = drawLineGraph("accelerationhistory", 'Acceleration', 'sec', 'ft/sec\u00B2', 'center', history.acceleration);
-        history.acceleration.push(RGraph.random(-20, 100));
+        history.acceleration.push(data.acceleration);
         history.time++;
     }
     

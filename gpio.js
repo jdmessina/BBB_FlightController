@@ -163,7 +163,21 @@ function startTelemetry(gpioUser) {
     gpioUser.telemetryCmd = 'telemetry';
     gpioUser.sendTelemetry = function() {
         // send the message to the user
-        gpioUser.message = 'telemetry goes here';
+        gpioUser.message = {
+            ailerons: Math.floor((Math.random()*180)-90),
+            elevator: Math.floor((Math.random()*180)-90),
+            rudder: Math.floor((Math.random()*180)-90),
+            compass: Math.floor((Math.random()*360)),
+            radial: Math.floor((Math.random()*360)),
+            distance: Math.floor((Math.random()*100)),
+            altitude: Math.floor((Math.random()*30)),
+            airspeed: Math.floor((Math.random()*100)),
+            vertspeed: Math.floor((Math.random()*2000)-1000),
+            bank: Math.floor((Math.random()*180)-90),
+            slip: Math.floor((Math.random()*180)-90),
+            aoa: Math.floor((Math.random()*60)-30),
+            acceleration: Math.floor((Math.random()*120)-20)
+        };
         gpioUser.chat(gpioUser.telemetryCmd);
     };
     
